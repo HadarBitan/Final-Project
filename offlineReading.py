@@ -24,7 +24,7 @@ for message in consumer:
     print("Received event:", event)
 
     # Store event in Cassandra
-    session.execute("INSERT INTO events (id, value) VALUES (uuid(), %s)", (event,))
+    session.execute("INSERT INTO OfflineEvents (id, value) VALUES (uuid(), %s)", (event,))
 
     # Process event using Spark
     df = spark.createDataFrame([(event,)], ['value'])

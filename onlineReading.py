@@ -28,7 +28,7 @@ def process_event(event):
     print("Received event:", event_value)
 
     # Store event in Cassandra
-    session.execute("INSERT INTO events (id, value) VALUES (uuid(), %s)", (event_value,))
+    session.execute("INSERT INTO OnlineEvents (id, value) VALUES (uuid(), %s)", (event_value,))
 
     # Process event using Spark
     df = spark.createDataFrame([(event_value,)], ['value'])
