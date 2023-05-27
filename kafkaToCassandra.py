@@ -7,7 +7,7 @@ kafka_consumer = KafkaConsumer(
     'student-start',
     bootstrap_servers='localhost:9092',
     group_id='first_kafka_cassandra_consume'
-)#we choose the group_id name
+)  # we choose the group_id name
 
 # Set up Cassandra connection
 cassandra_cluster = Cluster(['localhost'])

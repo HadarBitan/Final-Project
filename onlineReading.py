@@ -22,6 +22,7 @@ session.execute("CREATE KEYSPACE IF NOT EXISTS event_keyspace WITH REPLICATION =
 session.execute("USE event_keyspace")
 session.execute("CREATE TABLE IF NOT EXISTS OnlineEvents (id UUID PRIMARY KEY, value TEXT)")
 
+
 # Process events from Kafka
 def process_event(event):
     event_value = event.value.decode('utf-8')
@@ -34,10 +35,12 @@ def process_event(event):
     df = spark.createDataFrame([(event_value,)], ['value'])
     df.show()
 
+
 # Create Kafka consumer thread
 def consume_events():
     for event in consumer:
         process_event(event)
+
 
 # Start Kafka consumer thread
 consumer_thread = threading.Thread(target=consume_events)

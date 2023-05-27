@@ -2,8 +2,7 @@ the table will look something like this:
 online-
 source account, transfer, destination account, type of destination account
 
-offline-
-account, list of previous transfer, most common shopping places types, red flags
+offline-account, list of previous transfer, most common shopping places types, red flags
 
 events will look like this:
 source account, transfer, destination account

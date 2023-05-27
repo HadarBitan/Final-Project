@@ -1,6 +1,6 @@
 from cassandra.cluster import Cluster
 
-# Cassandra connection details
+# Cassandra's connection details
 contact_points = ['localhost']
 port = 9042
 keyspace = 'student_start'
