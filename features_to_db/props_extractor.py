@@ -2,7 +2,7 @@ from configparser import ConfigParser
 import os
 
 config = ConfigParser()
-section = os.getenv("local_mode") 
+section = os.getenv("local_mode")
 
 # parse existing file
 kafka_brokers = config.get(section, "kafka_brokers")

@@ -6,8 +6,8 @@ from cassandra.query import SimpleStatement
 from features_to_db import kafka_consumer, metric_container, props_extractor
 
 cassandra_cluster = Cluster([props_extractor])
-cassandra_session = cassandra_cluster.connect('student_start')
-query = "INSERT INTO {0} (src, dst, edge_value, props, src_type, dst_type, edge_type) VALUES (?, ?, ?, ?, ?, ?, ?)"
+cassandra_session = cassandra_cluster.connect('Final_Project')
+query = "INSERT INTO 'offline_graph' (src, dst, edge_value, props, src_type, dst_type, edge_type) VALUES (?, ?, ?, ?, ?, ?, ?)"
 
 prepared_query = cassandra_session.prepare(query)
 prepare_statement_container = {}
