@@ -2,7 +2,6 @@ from kafka import KafkaConsumer
 from cassandra.cluster import Cluster
 from cassandra.query import SimpleStatement
 
-
 # Set up Cassandra connection
 from features_to_db import kafka_consumer, metric_container, props_extractor
 
@@ -14,6 +13,7 @@ prepared_query = cassandra_session.prepare(query)
 prepare_statement_container = {}
 for name,table in metric_container.features_to_tables.items():
     prepare_statement_container[name] = cassandra_session.prepare(query.format(table))
+###
 
 # Read messages from Kafka and write to Cassandra
 for message in kafka_consumer.kafka_consumer:
