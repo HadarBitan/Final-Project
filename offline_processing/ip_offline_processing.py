@@ -1,6 +1,11 @@
-from features_to_db import metric_container
-from features_to_db.kafka_consumer import kafka_consumer
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import from_json, to_json
+from pyspark.sql.types import StringType, StructType
+
 from features_to_db.props_extractor import cassandra_client
+from features_to_db import metric_container
+from offline_processing.sparkReadFromKafka import spark_read_from_kafka
+from offline_processing.sparkWriteToKafke import kafka_writer
 
 
 def enrich_data_with_location(edge_type, data):
@@ -13,16 +18,13 @@ def enrich_data_with_location(edge_type, data):
         location = get_location_by_ip(ip_address)
 
         # Perform data enrichment based on the account-IP-location relationship
+        data["location"] = location
 
-        # Return the enriched data
-        return enriched_data
-    else:
-        # Handle unsupported edge types or return default data
-        return data
+    return data
 
 
 def get_location_by_ip(ip_address):
-    CassandraClient = cassandra_client()
+    cassandra_client()
     query = f"SELECT location FROM {metric_container.features_to_tables['account_ip_location']} " \
             f"WHERE ip_address = '{ip_address}'"
     result = cassandra_client.execute_query(query)
@@ -33,11 +35,31 @@ def get_location_by_ip(ip_address):
     return location
 
 
-# Set up Kafka consumer
-kafkaConsumer = kafka_consumer()
+# Set up Spark session
+spark = SparkSession.builder \
+    .appName("EnrichData") \
+    .getOrCreate()
 
-# Read messages from Kafka and write to Cassandra
-for message in kafka_consumer.kafka_consumer:
-    # Process each Kafka message and write to Cassandra
-    enriched_data = enrich_data_with_location(message.edge_type, message.data)
-    cassandra_client.insert_data(enriched_data)
+# Read messages from Kafka using Spark
+data = spark_read_from_kafka(spark)
+
+# Define the schema for the incoming messages
+schema = StructType().add("edge_type", StringType()).add("data", StringType())
+
+# Deserialize the data from Kafka into DataFrame using the schema
+df = data.select(from_json(data.value, schema).alias("json")).select("json.*")
+
+# Enrich the data
+enriched_data = df.rdd.map(lambda row: enrich_data_with_location(row.edge_type, row.data))
+
+# Convert the enriched data back to DataFrame
+enriched_df = enriched_data.toDF()
+
+# Serialize the enriched data back to JSON format
+enriched_df = enriched_df.select(to_json(enriched_df).alias("value"))
+
+# Write enriched data to Kafka using Spark
+kafka_writer(enriched_df)
+
+# Stop the Spark session
+spark.stop()

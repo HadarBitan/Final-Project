@@ -1,6 +1,11 @@
-from features_to_db import metric_container
-from features_to_db.kafka_consumer import kafka_consumer
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import from_json, to_json
+from pyspark.sql.types import StringType, StructType
+
 from features_to_db.props_extractor import cassandra_client
+from features_to_db import metric_container
+from offline_processing.sparkReadFromKafka import spark_read_from_kafka
+from offline_processing.sparkWriteToKafke import kafka_writer
 
 
 def enrich_data_with_email_ip_relationship(edge_type, data):
@@ -25,12 +30,7 @@ def enrich_data_with_email_ip_relationship(edge_type, data):
         # Perform data enrichment based on the email-IP relationship
         if has_relationship:
             # Extract additional information from the account_email_ip table
-            query = f"SELECT additional_info FROM {metric_container.features_to_tables['account_email_ip']} " \
-                    f"WHERE email = '{email}' AND ip_address = '{ip_address}'"
-            result = cassandra_client.execute_query(query)
-
-            # Get the additional information from the query result
-            additional_info = result.get("additional_info", None)
+            additional_info = get_additional_info(email, ip_address)
 
             # Update the data with the additional information
             if additional_info:
@@ -50,6 +50,7 @@ def check_email_ip_relationship(email, ip_address):
     Returns:
         bool: True if there is a relationship, False otherwise.
     """
+    cassandra_client()
     query = f"SELECT * FROM {metric_container.features_to_tables['account_email_ip']} " \
             f"WHERE email = '{email}' AND ip_address = '{ip_address}'"
     result = cassandra_client.execute_query(query)
@@ -60,11 +61,54 @@ def check_email_ip_relationship(email, ip_address):
     return has_relationship
 
 
-# Set up Kafka consumer
-kafkaConsumer = kafka_consumer()
+def get_additional_info(email, ip_address):
+    """
+    Retrieves additional information from the account_email_ip table.
 
-# Read messages from Kafka and write to Cassandra
-for message in kafkaConsumer.kafka_consumer:
-    # Process each Kafka message and write to Cassandra
-    enriched_data = enrich_data_with_email_ip_relationship(message.edge_type, message.data)
-    cassandra_client.insert_data(enriched_data)
+    Args:
+        email (str): The email address.
+        ip_address (str): The IP address.
+
+    Returns:
+        str: The additional information.
+    """
+    cassandra_client()
+    query = f"SELECT additional_info FROM {metric_container.features_to_tables['account_email_ip']} " \
+            f"WHERE email = '{email}' AND ip_address = '{ip_address}'"
+    result = cassandra_client.execute_query(query)
+
+    additional_info = result.get("additional_info", None)
+
+    return additional_info
+
+
+# Set up Spark session
+spark = SparkSession.builder \
+    .appName("EnrichData") \
+    .getOrCreate()
+
+# Read messages from Kafka using Spark
+data = spark_read_from_kafka(spark)
+
+# Define the schema for the incoming messages
+schema = StructType().add("edge_type", StringType()).add("data", StringType())
+
+# Deserialize the data from Kafka into DataFrame using the schema
+df = data.select(from_json(data.value, schema).alias("json")).select("json.*")
+
+# Enrich the data
+enriched_data = df.rdd.map(lambda row: enrich_data_with_email_ip_relationship(row.edge_type, row.data))
+
+# Convert the enriched data back to DataFrame
+enriched_df = enriched_data.toDF()
+
+# Serialize the enriched data to JSON
+enriched_df_json = enriched_df.select(to_json(enriched_df).alias("value"))
+
+# Write enriched data to Kafka using Spark
+kafka_writer(enriched_df_json)
+
+# Stop Spark session
+spark.stop()
+
+
