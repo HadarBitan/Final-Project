@@ -1,6 +1,7 @@
 # Real-time Fraud Detection using Lambda Architecture for PayPal
 
-Introduction
+## Introduction
+
   The  project focus on building a fraud prevention system for PayPal. The project utilizes Kafka, Cassandra, Spark, and Spark Streaming, along with a microservices architecture.
 
   Kafka enables real-time data ingestion and event streaming, facilitating seamless data flow within the system. Cassandra provides scalable storage for  data. Spark is used for offline data analytics and batch processing, while Spark Streaming enables real-time processing of streaming data.
@@ -10,7 +11,8 @@ Introduction
   By leveraging these technologies and architectural patterns, the project aims to develop a robust and scalable fraud prevention system for PayPal, ensuring real-time risk estimation during transaction processing.
 
 
-Goal
+## Goal
+
   The goal of the project for PayPal is to develop a system based on the Lambda architecture that focuses on preventing fraudulent activities by identifying and mitigating risks associated with malicious users. The specific objectives of the project are as follows:
 
   1.Fraud Prevention: The primary objective is to enhance fraud prevention capabilities within PayPal's system. By leveraging real-time data processing and predictive models, the system aims to identify and flag transactions initiated by malicious users or those with a high risk of being fraudulent.
@@ -25,7 +27,8 @@ Goal
 
   Overall, the project aims to develop a robust and efficient system using the Lambda architecture that effectively detects and prevents fraudulent activities within PayPal. By leveraging synthetic data and real-time processing, the system's goal is to achieve a high detection rate of at least 90% for malicious users while maintaining scalability and efficiency in handling large transaction volumes
 
-Methods and Algorithms
+## Methods and Algorithms
+
   Data Preprocessing: Clean, normalize, and extract relevant features from PayPal data.
   
   Batch Processing: Analyze historical data using Spark .
@@ -41,7 +44,8 @@ Methods and Algorithms
   These methods and algorithms enable the system to analyze data, estimate risks, and make informed decisions to prevent fraud.
   
 
-overview of the selected approach
+## overview of the selected approach
+
   Lambda Architecture: The Lambda architecture is a data processing architecture designed to handle both real-time and batch processing of large-scale data. It combines batch processing and stream processing to provide efficient and accurate results.
 
   2.Real-time Model Execution: The system will incorporate real-time model execution, which means that as transactions occur, the collected features will be processed and fed into predictive models in real-time. These models will analyze the features and generate risk estimates or predictions based on the incoming data.
@@ -55,7 +59,8 @@ overview of the selected approach
   Overall, the Lambda architecture-based system for PayPal aims to collect relevant features, apply real-time model execution, and estimate risks associated with transactions in order to enhance fraud detection and risk management processes. The combination of batch and real-time processing ensures efficient and accurate risk estimation while maintaining scalability and responsiveness
 
 
-Solution Description
+## Solution Description
+
   The solution utilizes a Lambda architecture to build a fraud detection system for PayPal. The goal is to prevent at least 90% of malicious users using synthetic data. The system is designed using microservices architecture and employs various technologies, including Kafka, Cassandra, Spark, and Spark Streaming.
 
   The solution follows a three-layered approach:
