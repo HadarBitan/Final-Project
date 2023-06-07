@@ -3,25 +3,18 @@ here we do a seperation and sending kafka: account -> number of transfer that is
 all data from kafka would look like this: [number of transfer, account number, ip src, ip dst, amount of transfer, email, props]
 number of transfer is a unique key and props would look like this: {"os":"window", "time":324234, "browser": "chrome", "region" : "Canada"}
 """
-import json
+from pyspark.sql.functions import from_json, col, concat_ws
+import kafka_consprod_spark_stream as kaf
 
-from features_to_db import kafka_consumer, kafka_producer
+# Create the message to write to Kafka
+message = concat_ws(", ", "Transfer Exception:", kaf.account, kaf.number_of_transfer).alias("message")
 
-for message in kafka_consumer.kafka_consumer:
-    # Extract the necessary data from Kafka message
-    json_m = json.loads(message.value.decode('utf-8'))  # maybe u have to change it
+# Select the message to write to Kafka
+message_df = message.selectExpr("CAST(message AS STRING)")
 
-    transfer_num = json_m["number of transfer"]
-    account_num = json_m["account"]
-    src_vertex = json_m["src"]
-    dst_vertex = json_m["dst"]
-    transfer_value = json_m["value"]
-    email = json_m["email"]
-    edge_props = json_m["props"]
-
-    # Produce a single message
-    message = 'Transfer exception:' + account_num + ", " + transfer_num
-    kafka_producer.producer.produce(kafka_producer.topic, value=message.encode('utf-8'))
-
-    # Wait for the message to be delivered to Kafka
-    kafka_producer.producer.flush()
+# Write the message to Kafka using Spark Structured Streaming
+query = message_df.writeStream \
+    .format("kafka") \
+    .option("kafka.bootstrap.servers", kaf.kafka_bootstrap_servers) \
+    .option("topic", kaf.kafka_produce_topic) \
+    .start()
