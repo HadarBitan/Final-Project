@@ -30,7 +30,7 @@ def enrich_data_with_email_account_relationship(email, account_id, data):
 
     return data
 
-
+#talornan
 # Process events from Kafka and generate edges
 def process_events(events):
     for event in events:
