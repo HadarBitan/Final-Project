@@ -71,7 +71,7 @@ class DataEnricherBase:
         enriched_data = joined_df.rdd.map(self.enrich_data).toDF()
 
         # Write the enriched data to Delta Lake, perform additional transformations, etc.
-        enriched_data.write.format("delta").mode("append").save("/tmp/enriched_data")
+        enriched_data.write.format("json").mode("append").save("/tmp/enriched_data")
 
     def stop_spark_session(self):
         # Stop the Spark session

@@ -1,5 +1,6 @@
 from offline_processing.DataEnricherBase import DataEnricherBase
 
+
 class EmailAccount(DataEnricherBase):
     """
     Data enrichment class for enriching account-email data.
@@ -17,8 +18,6 @@ class EmailAccount(DataEnricherBase):
         Returns:
             dict: The enriched data.
         """
-        # This method is specific to the AccountEmail class and enriches the data for each row
-
         # Assuming the DataFrame has columns: "email", "account_id", "event_time", and "email_creation_time"
         email = row["email"]
         account_id = row["account_id"]
@@ -55,5 +54,5 @@ class EmailAccount(DataEnricherBase):
         # Enrich the data with the specified DataFrame
         enriched_data = joined_df.rdd.map(self.enrich_data).toDF()
 
-        # Write the enriched data to Delta Lake, perform additional transformations, etc.
+        # Write the enriched data to kafka table "emailAccountEnrichment"
         enriched_data.write.format("json").mode("append").save("/tmp/emailAccountEnrichment")
