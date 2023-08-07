@@ -4,6 +4,7 @@ from pyspark.sql.types import StringType, StructType
 
 
 def spark_read_from_kafka():
+    #todo read json from kafka
     # Set the schema for parsing the JSON value
     schema = StructType().add("src", StringType()) \
         .add("dst", StringType()) \

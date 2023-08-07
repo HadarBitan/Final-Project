@@ -1,32 +1,30 @@
 from abc import ABC
-
 from pyspark.shell import spark
-
 from offline_processing.DataEnricherBase import DataEnricherBase
 
 
-class EmailUsedByAccount(DataEnricherBase, ABC):
+class IPAccount(DataEnricherBase, ABC):
 
     def get_relevant_events_list(self):
-        return ["EmailUpdatedEvent"]
+        return ["IPUpdatedEvent"]
 
     def join_by_expression(self):
-        return f"{self.get_src_column_name()} = email_info['org_email']"
+        return "${self.get_src_column_name()} = IP_info['IP')"
 
     def get_enriched_table(self):
-        return spark.table("edw.email_info")
+        return spark.table("edw.IP_info")
 
     def get_relevant_enriched_columns(self):
-        return ["email_created_timestamp",
-                "email_last_used",
-                "backup_email",
-                "email_owner_name"]
+        return ["IP_created_timestamp",
+                "IP_last_used",
+                "IP_owner_name",
+                "IP_location"]
 
     def get_src_column_name(self):
-        return "email"
+        return "IP"
 
     def get_src_type_column_name(self):
-        return "EMAIL"
+        return "IP"
 
     def get_dst_column_name(self):
         return "pp_account"
@@ -35,9 +33,7 @@ class EmailUsedByAccount(DataEnricherBase, ABC):
         return "ACCOUNT"
 
     def get_timestamp_column_name(self):
-        return "email_created_timestamp"
+        return "IP_created_timestamp"
 
     def get_edge_type_name(self):
         return "USED_BY"
-
-
