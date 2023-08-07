@@ -6,11 +6,11 @@ number of transfer is a unique key and props would look like this: {"os":"window
 from pyspark.sql.functions import from_json, col, concat_ws
 import kafka_consprod_spark_stream as kaf
 
-# Create the message to write to Kafka
-message = concat_ws(", ", "number of transfer -> amount of transfer", kaf.number_of_transfer, kaf.value).alias("message")
+# Create a JSON column containing "account" and "email" fields only
+json_df = kaf.number_of_transfer.selectExpr("number_of_transfer", "value")
 
-# Select the message to write to Kafka
-message_df = message.selectExpr("CAST(message AS STRING)")
+# Select the JSON message to write to Kafka
+message_df = json_df.selectExpr("CAST(to_json(struct(*)) AS STRING) as json_message")
 
 # Write the message to Kafka using Spark Structured Streaming
 query = message_df.writeStream \
