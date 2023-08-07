@@ -5,6 +5,9 @@ class EmailUsedByAccount(DataEnricherBase):
 
    def get_relevant_events_list(self):
         return ["EmailUpdadEvent"]
+
+       def join_by_expression(self):
+           return s"${self.get_src_column_name() = email_info['org_email')"
        
     def get_enriched_table(self):
         return spark.table("edw.email_info")
