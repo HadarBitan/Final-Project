@@ -1,58 +1,33 @@
 from offline_processing.DataEnricherBase import DataEnricherBase
 
 
-class EmailAccount(DataEnricherBase):
-    """
-    Data enrichment class for enriching account-email data.
+class EmailUsedByAccount(DataEnricherBase):
 
-    Inherits from DataEnricherBase.
-    """
+   def get_relevant_events_list(self):
+        return ["EmailUpdadEvent"]
+       
+    def get_enriched_table(self):
+        return spark.table("edw.email_info")
+        
+    def get_relevant_enriched_colums(self):
+        return ["email_created_timestmap", "email_last_used", "backup_email", "email_owner_name"]
+        
+    def get_src_column_name(self):
+        return "email"
+        
+    def get_src_type_column_name(self):
+        return "EMAIL"
+        
+    def get_dst_column_name(self):
+        return "pp_account"    
 
-    def enrich_data(self, row):
-        """
-        Enrich the account-email data for each row.
+    def get_dst_type_column_name(self):
+        return "ACCOUNT"  
+        
+    def get_timestamp_column_name(self):
+        return "email_created_timestmap"    
 
-        Args:
-            row (Row): A row in the DataFrame to be enriched.
+    def get_edge_type_name(self):
+        return "USED_BY"   
 
-        Returns:
-            dict: The enriched data.
-        """
-        # Assuming the DataFrame has columns: "email", "account_id", "event_time", and "email_creation_time"
-        email = row["email"]
-        account_id = row["account_id"]
-        event_time = row["event_time"]
-
-        # Read data from the existing DataFrame (Emails table)
-        emails_df = self.spark.table("email_info")
-
-        # Filter the DataFrame to find the email's creation time and last activity time
-        email_info = emails_df.filter(emails_df.email == email) \
-            .select("email", "creation_time", "last_activity_time") \
-            .collect()[0]
-
-        # Update the data with email's creation time and last activity time
-        row["email_creation_time"] = email_info["creation_time"]
-        row["email_last_activity_time"] = email_info["last_activity_time"]
-
-        return row
-
-    def process_events(self, kafka_topic):
-        """
-        Process events from the Kafka topic and perform data enrichment.
-
-        Args:
-            kafka_topic (str): The name of the Kafka topic containing the events.
-        """
-        # Read data from Kafka topic and create DataFrame
-        df_kafka = self.read_kafka_topic_as_dataframe(kafka_topic)
-
-        # Perform the JOIN on the specified condition
-        join_condition = df_kafka["account_id"] == "email_info.account_id"
-        joined_df = df_kafka.join("email_info", join_condition, "inner")
-
-        # Enrich the data with the specified DataFrame
-        enriched_data = joined_df.rdd.map(self.enrich_data).toDF()
-
-        # Write the enriched data to kafka table "emailAccountEnrichment"
-        enriched_data.write.format("json").mode("append").save("/tmp/emailAccountEnrichment")
+  
