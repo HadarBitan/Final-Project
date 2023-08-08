@@ -3,12 +3,16 @@ from pyspark.shell import spark
 from online_processing.online_process import online_procees
 
 
-class EmailUpdadEvent(online_procees, ABC):
+class EmailUpdadEvent:
 
-    def extract_data_from_json(self):
-        return
+    def __init__(self, json_data):
+        # Extract the fields from the parsed JSON data
+        self.account = json_data.select("data.account")
+        self.email = json_data.select("data.email")
 
     def emailUsedByAccount(self):
         """
         in this function we create an edge that connect between an email to the account that belong to it
         """
+        json_output = self.account.selectExpr("account", "email")
+        online_procees.write_to_kafka(producer="demo_cons", output=json_output)

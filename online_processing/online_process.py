@@ -1,5 +1,4 @@
 import json
-from abc import abstractmethod
 
 from pyspark.pandas import spark
 from pyspark.sql.functions import from_json, col
@@ -35,7 +34,8 @@ class online_procees:
         parsed_stream = kafka_df.select(from_json(col("value"), StringType()).alias("parsed_value"))
         return parsed_stream
 
-    def write_to_kafka(self, producer, output):
+    @staticmethod
+    def write_to_kafka(producer, output):
         """
         A function that gets a topic to write to the new data, and get the data we want to output to kafka
         """
@@ -54,6 +54,3 @@ class online_procees:
         """
         return data_json.select("data.event_type")
 
-    @abstractmethod
-    def extract_data_from_json(self):
-        pass
