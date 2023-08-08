@@ -1,0 +1,24 @@
+<html>
+<head>
+    <title>DSADA</title>
+</head>
+<body>
+    <table>
+        <tr>
+            <th>Account Number</th>
+            <th>Is Malicious</th>
+            <th>Money Transfer Amount</th>
+            <th>Online Status</th>
+            <th>Operating System</th>
+             <th>Sender IP</th>
+        </tr>
+        {% for user in users %}
+        <tr>
+            {% for cell in user %}
+                <td>{{ cell }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
