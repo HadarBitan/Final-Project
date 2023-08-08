@@ -36,4 +36,4 @@ class AccountToCreditCard(DataEnricherBase, ABC):
         return "credit_card_added_timestamp"
 
     def get_edge_type_name(self):
-        return "HAS_CREDIT_CARD"
+        return "HAS"

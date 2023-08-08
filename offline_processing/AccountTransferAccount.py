@@ -45,4 +45,4 @@ class AccountTransactionAccount(DataEnricherBase, ABC):
         return "transaction_timestamp"
 
     def get_edge_type_name(self):
-        return "TRANSFER_BETWEEN_ACCOUNTS"
+        return "TRANSFER"
