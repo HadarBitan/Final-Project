@@ -15,10 +15,11 @@ class online_procees:
             .appName("DataEnricher") \
             .getOrCreate()
 
-    def read_from_kafka(self):
+    def read_from_kafka(self, data_scheme):
         """
         Read data from the Kafka using spark streaming.
         """
+
         # Read from Kafka using Spark Structured Streaming, we create here a consumer
         kafka_df = self.spark.readStream \
             .format("kafka") \
