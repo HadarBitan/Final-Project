@@ -106,3 +106,5 @@ class DataEnricherBase:
     @abstractmethod
     def get_edge_type_name(self):
         pass            
+
+
