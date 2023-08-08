@@ -1,5 +1,3 @@
-from abc import ABC
-from pyspark.shell import spark
 from pyspark.sql.functions import col
 
 from online_processing.online_process import online_procees
@@ -16,6 +14,16 @@ class TransactionEvent:
         self.value = json_data.select("data.value")
         self.email = json_data.select("data.email")
         self.props = json_data.select("data.props").alias("props")
+
+        self.activate_all()
+
+    def activate_all(self):
+        # activate all the creation of edges
+        self.ipUsedByAccount()
+        self.emailUsedByAccount()
+        self.ipSrcUsedByNumberOfTransfer()
+        self.ipDstUsedByNumberOfTransfer()
+        self.regionUsedByAccount()
 
     def ipUsedByAccount(self):
         """

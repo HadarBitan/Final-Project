@@ -1,10 +1,13 @@
 import json
+from re import match
 
 from pyspark.pandas import spark
 from pyspark.sql.functions import from_json, col
 from pyspark.sql.types import StructType, StringType, IntegerType
 from pyspark.sql import SparkSession
 from features_to_db import props_extractor
+import TransactionEvent
+import EmailUpdateEvent
 
 
 class online_procees:
@@ -52,5 +55,15 @@ class online_procees:
         :param data_json: the json we got drom kafka
         :return: a string of the event type
         """
-        return data_json.select("data.event_type")
-
+        event_type = data_json.select("data.event_type")
+        event_handlers = {
+            "TransactionEvent": TransactionEvent,
+            "EmailUpdateEvent": EmailUpdateEvent
+        }
+        if event_type == "TransactionEvent":
+            TransactionEvent(data_json)
+        elif event_type == "EmailUpdateEvent":
+            EmailUpdateEvent(data_json)
+        else:
+            # Handle the default case
+            print("Handling default case:", data_json)

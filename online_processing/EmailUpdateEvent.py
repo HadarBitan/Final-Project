@@ -10,6 +10,12 @@ class EmailUpdadEvent:
         self.account = json_data.select("data.account")
         self.email = json_data.select("data.email")
 
+        self.activate_all()
+
+    def activate_all(self):
+        # activate all the creation of edges
+        self.emailUsedByAccount()
+
     def emailUsedByAccount(self):
         """
         in this function we create an edge that connect between an email to the account that belong to it
