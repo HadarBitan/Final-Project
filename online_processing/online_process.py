@@ -7,6 +7,7 @@ from pyspark.sql.types import StructType, StringType, IntegerType
 from pyspark.sql import SparkSession
 from features_to_db import props_extractor
 
+
 class online_procees:
 
     def __init__(self):
@@ -27,9 +28,12 @@ class online_procees:
             .option("subscribe", props_extractor.consumer_group) \
             .load()
 
-        # Read data from the Kafka topic and create a DataFrame
-        data = [json.loads(event.value.decode('utf-8')) for event in kafka_df]
-        return data
+        # Convert the value column (Kafka message) to a string
+        kafka_df = kafka_df.selectExpr("CAST(value AS STRING)")
+
+        # Parse JSON using Spark's built-in JSON functions
+        parsed_stream = kafka_df.select(from_json(col("value"), StringType()).alias("parsed_value"))
+        return parsed_stream
 
     def write_to_kafka(self, producer, output):
         """

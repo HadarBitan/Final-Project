@@ -2,9 +2,11 @@ from abc import ABC
 from pyspark.shell import spark
 from online_processing.online_process import online_procees
 
+
 class TransactionEvent(online_procees, ABC):
 
     def extract_data_from_json(self):
+        return
         # Extract the fields from the parsed JSON data
         # self.number_of_transfer = parsed_df.select("data.number_of_transfer")
         # account = parsed_df.select("data.account")
@@ -21,3 +23,26 @@ class TransactionEvent(online_procees, ABC):
         in this function we create an edge that connect between an ip address to the account that belong to it
         """
         # json_output = number_of_transfer.selectExpr("account", "src")
+
+    def emailUsedByAccount(self):
+        """
+        in this function we create an edge that connect between an ip address to the account that belong to it
+        """
+        # json_output = number_of_transfer.selectExpr("account", "src")
+
+    def ipSrcUsedByNumberOfTransfer(self):
+        """
+        in this function we create an edge that connect between an ip address to the account that belong to it
+        """
+        # json_output = number_of_transfer.selectExpr("account", "src")
+
+    def ipDstUsedByNumberOfTransfer(self):
+        """
+        in this function we create an edge that connect between an ip address to the account that belong to it
+        """
+        # json_output = number_of_transfer.selectExpr("account", "src")
+
+    def regionUsedByAccount(self):
+        """
+        in this function we create an edge that connect between an ip address to the account that belong to it
+        """
