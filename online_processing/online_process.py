@@ -1,4 +1,5 @@
 import json
+from abc import abstractmethod
 
 from pyspark.pandas import spark
 from pyspark.sql.functions import from_json, col
@@ -47,3 +48,7 @@ class online_procees:
         :return: a string of the event type
         """
         return data_json.select("data.event_type")
+
+    @abstractmethod
+    def extract_data_from_json(self):
+        pass
