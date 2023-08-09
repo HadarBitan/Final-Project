@@ -1,5 +1,3 @@
-from abc import ABC
-from pyspark.shell import spark
 from online_processing.online_process import online_procees
 
 
