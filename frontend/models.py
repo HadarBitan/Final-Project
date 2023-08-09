@@ -34,7 +34,7 @@ def get_users():
     cluster = Cluster(['127.0.0.1'])
     session = cluster.connect('final_project')
 
-    query = "SELECT * FROM users;"
+    query = "SELECT sender_ip, account_number, is_malicious, money_transfer_amount, online_status,operating_system FROM users;"
 
     rows = session.execute(query)
 
