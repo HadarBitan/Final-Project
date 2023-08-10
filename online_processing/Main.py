@@ -1,5 +1,4 @@
 if __name__ == '__main__':
-    # from features_to_db import props_extractor
     from online_processing import online_process
 
     # Create an instance of the online_process class

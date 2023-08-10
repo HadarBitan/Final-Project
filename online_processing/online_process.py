@@ -1,7 +1,7 @@
 from pyspark.sql.functions import from_json, col
 from pyspark.sql.types import StructType, StringType, IntegerType
 from pyspark.sql import SparkSession
-from features_to_db import props_extractor
+from edges_to_db import props_extractor
 import TransactionEvent
 import EmailUpdateEvent
 import CreditCardAddedEvent

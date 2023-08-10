@@ -1,5 +1,4 @@
 from online_processing import EventProcessor
-from pyspark.sql.functions import col
 from online_processing.online_process import online_process
 
 
