@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import uvicorn
 
-from frontend.models import get_users
+from frontend.models import get_malicious_accounts, upload_csv_data_to_db, create_fake_malicious_accounts
 
 
 app = FastAPI(debug=True)
@@ -21,9 +21,26 @@ def root():
 
 @app.get("/view", response_class=HTMLResponse)
 def route_view(request: Request):
-    users = get_users()
+    malicious_accounts = get_malicious_accounts()
 
-    return templates.TemplateResponse("view.html", {"request": request, "users": users})
+    return templates.TemplateResponse("view.html", {"request": request, "malicious_accounts": malicious_accounts})
+
+
+@app.get('/upload')
+def route_upload_csv():
+    res = upload_csv_data_to_db()
+    return {
+        'message': 'The CSV uploaded.',
+        'res': res
+    }
+
+
+@app.get('/create_fakes')
+def create_fakes():
+    create_fake_malicious_accounts(250)
+    return {
+        'message': 'Fake at most 250 malicious accounts',
+    }
 
 
 if __name__ == "__main__":

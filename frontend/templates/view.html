@@ -1,20 +1,18 @@
 <html>
 <head>
-    <title>DSADA</title>
+    <title>Malicious_Accounts</title>
 </head>
 <body>
     <table>
         <tr>
+            <th>Sender IP</th>
             <th>Account Number</th>
-            <th>Is Malicious</th>
-            <th>Money Transfer Amount</th>
             <th>Online Status</th>
             <th>Operating System</th>
-             <th>Sender IP</th>
         </tr>
-        {% for user in users %}
+        {% for malicious_accounts in malicious_accounts %}
         <tr>
-            {% for cell in user %}
+            {% for cell in malicious_accounts %}
                 <td>{{ cell }}</td>
             {% endfor %}
         </tr>

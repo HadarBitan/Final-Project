@@ -3,7 +3,8 @@ from cassandra.cluster import Cluster
 from cassandra.query import SimpleStatement
 
 # Set up Cassandra connection
-from features_to_db import kafka_consumer, metric_container, props_extractor
+from features_to_db import kafka_consumer
+from edges_to_db import metric_container, props_extractor
 
 cassandra_cluster = Cluster([props_extractor])
 cassandra_session = cassandra_cluster.connect('Final_Project')
