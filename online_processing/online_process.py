@@ -1,16 +1,15 @@
-import json
-from re import match
-
-from pyspark.pandas import spark
 from pyspark.sql.functions import from_json, col
 from pyspark.sql.types import StructType, StringType, IntegerType
 from pyspark.sql import SparkSession
 from features_to_db import props_extractor
 import TransactionEvent
 import EmailUpdateEvent
+import CreditCardAddedEvent
+import IPUpdatedEvent
+import PhoneUpdatedEvent
 
 
-class online_procees:
+class online_process:
 
     def __init__(self):
         # Create a Spark session
@@ -18,7 +17,7 @@ class online_procees:
             .appName("DataEnricher") \
             .getOrCreate()
 
-    def read_from_kafka(self, data_scheme):
+    def read_from_kafka(self):
         """
         Read data from the Kafka using spark streaming.
         """
@@ -49,21 +48,25 @@ class online_procees:
             .option("topic", producer) \
             .start()
 
-    def extract_evet_type(self, data_json):
+    def process_event(self, data_json):
         """
         in this function we want to extract from the json we get the event type so we can process the data
         :param data_json: the json we got drom kafka
         :return: a string of the event type
         """
-        event_type = data_json.select("data.event_type")
-        event_handlers = {
-            "TransactionEvent": TransactionEvent,
-            "EmailUpdateEvent": EmailUpdateEvent
+        event_type = data_json.select("data.event_type").collect()[0][0]
+
+        event_processor_classes = {
+            "Transaction": TransactionEvent.TransactionEventProcessor,
+            "Email Update": EmailUpdateEvent.EmailUpdateEventProcessor,
+            "Credit Card Add": CreditCardAddedEvent.CreditCardUpdateEventProcessor,
+            "IP address Update": IPUpdatedEvent.IPUpdateEventProcessor,
+            "Phone Number Update": PhoneUpdatedEvent.PhoneUpdateEventProcessor
         }
-        if event_type == "TransactionEvent":
-            TransactionEvent(data_json)
-        elif event_type == "EmailUpdateEvent":
-            EmailUpdateEvent(data_json)
+
+        processor_class = event_processor_classes.get(event_type, None)
+        if processor_class:
+            processor_instance = processor_class(data_json)
+            processor_instance.handle()
         else:
-            # Handle the default case
-            print("Handling default case:", data_json)
+            print("Event type not found:", event_type)

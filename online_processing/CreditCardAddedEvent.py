@@ -1,22 +1,20 @@
-from online_processing.online_process import online_procees
+from online_processing import EventProcessor
+from online_processing.online_process import online_process
 
 
-class EmailUpdadEvent:
+class CreditCardUpdateEventProcessor(EventProcessor):
+    def handle(self):
+        credit_update_event = CreditCardUpdateEvent(self.json_data)
+        credit_update_event.activate_all()
 
+
+class CreditCardUpdateEvent:
     def __init__(self, json_data):
-        # Extract the fields from the parsed JSON data
-        self.account = json_data.select("data.account")
-        self.creditCard = json_data.select("data.credit_card")
-
-        self.activate_all()
+        self.json_data = json_data
 
     def activate_all(self):
-        # activate all the creation of edges
         self.creditCardUsedByAccount()
 
     def creditCardUsedByAccount(self):
-        """
-        in this function we create an edge that connect between an credit_card to the account that belong to it
-        """
-        json_output = self.account.selectExpr("account", "credit_card")
-        online_procees.write_to_kafka(producer="demo_cons", output=json_output)
+        json_output = self.json_data.selectExpr("data.account", "data.credit_card")
+        online_process.write_to_kafka(producer="demo_cons", output=json_output)

@@ -1,22 +1,20 @@
-from online_processing.online_process import online_procees
+from online_processing import EventProcessor
+from online_processing.online_process import online_process
 
 
-class EmailUpdadEvent:
+class EmailUpdateEventProcessor(EventProcessor):
+    def handle(self):
+        email_update_event = EmailUpdateEvent(self.json_data)
+        email_update_event.activate_all()
 
+
+class EmailUpdateEvent:
     def __init__(self, json_data):
-        # Extract the fields from the parsed JSON data
-        self.account = json_data.select("data.account")
-        self.email = json_data.select("data.email")
-
-        self.activate_all()
+        self.json_data = json_data
 
     def activate_all(self):
-        # activate all the creation of edges
         self.emailUsedByAccount()
 
     def emailUsedByAccount(self):
-        """
-        in this function we create an edge that connect between an email to the account that belong to it
-        """
-        json_output = self.account.selectExpr("account", "email")
-        online_procees.write_to_kafka(producer="demo_cons", output=json_output)
+        json_output = self.json_data.selectExpr("data.account", "data.email")
+        online_process.write_to_kafka(producer="demo_cons", output=json_output)
