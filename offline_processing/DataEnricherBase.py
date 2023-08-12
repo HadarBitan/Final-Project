@@ -4,7 +4,11 @@ from abc import abstractmethod
 from kafka import KafkaConsumer
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
+from pyspark import SparkContext
 
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import *
+from pyspark.sql.types import *
 
 class DataEnricherBase:
     """
@@ -14,15 +18,17 @@ class DataEnricherBase:
         spark (SparkSession): The Spark session.
     """
 
-    def __init__(self):
+    def __init__(self, spark):
         """
         Initializes the DataEnricherBase by creating a Spark session.
         """
-        self.spark = SparkSession.builder \
-            .appName("DataEnricher") \
-            .getOrCreate()
+        self.spark = spark
 
-    def read_kafka_topic_as_dataframe(self, topic_name, kafka_servers):
+
+
+
+
+    def read_last_hourly_partition_dataframe(self, date, event_name):
         """
         Read data from the Kafka topic and create a DataFrame.
 
@@ -33,12 +39,10 @@ class DataEnricherBase:
         Returns:
             DataFrame: The DataFrame containing the data from the Kafka topic.
         """
-        kafka_consumer = KafkaConsumer(topic_name, bootstrap_servers=kafka_servers)
+        filter_expression = f"hour = {date.hour} and day = {date.day} and year = {date.year} and month = {date.month}"
+        return self.spark.table(f"{event_name}_partitioned").filter(filter_expression)
 
-        data = [json.loads(event.value.decode('utf-8')) for event in kafka_consumer]
-        return self.spark.createDataFrame(data)
-
-    def join_kafka_with_table(self, kafka_topic, table_name, join_condition):
+    def join_kafka_with_table(self, date, event_name):
         """
         Perform a JOIN between data from Kafka and an existing table in Spark.
 
@@ -48,13 +52,18 @@ class DataEnricherBase:
             join_condition (Column): The join condition.
 
         """
-        df_kafka = self.read_kafka_topic_as_dataframe(kafka_topic).filter(col("event_type").isin(self.get_relevant_events_list()))
+        df_kafka = self.read_last_hourly_partition_dataframe(date, event_name)
 
         table_df = self.get_enriched_table()
 
-        joined_df = df_kafka.join(table_df, on=self.join_by_expression(), how="inner").select(self.get_final_schema_expression() + "," + self.get_relevant_events_list())
+        select_expression = self.get_final_schema_expression() + self.get_relevant_enriched_colums()
 
-        joined_df.write.format("json").mode("append").save("/tmp/enriched_data")
+        joined_df = df_kafka.join(table_df, on=self.join_by_expression(df_kafka, table_df), how="inner")
+
+        df_select = joined_df.selectExpr(select_expression)
+
+        df_select.write.mode("overwrite").saveAsTable(f"{event_name}_proccesed")
+
 
     def get_final_schema_expression(self):
         """
@@ -63,14 +72,15 @@ class DataEnricherBase:
         Returns:
             str: The schema expression as a string.
         """
-        return f"${self.get_src_column_name()} as src, ${self.get_dst_column_name()} as dst, ${self.get_timestamp_column_name()} as timestamp, +\
-        ${self.get_src_type_column_name()} as src_type, ${self.get_dst_type_column_name()} as dst_type, ${self.get_edge_type_name()} as edge_type"
+        return f"{self.get_src_column_name()} as src,{self.get_dst_column_name()} as dst,{self.get_timestamp_column_name()} as timestamp,\
+        '{self.get_src_type_column_name()}' as src_type,'{self.get_dst_type_column_name()}' as dst_type, '{self.get_edge_type_name()}' as edge_type".split(",")
 
     def stop_spark_session(self):
         """
-        Stop the Spark session.
+        Stop any existing Spark session.
         """
-        self.spark.stop()
+        if 'spark' in globals():
+            self.spark.stop()
 
     @abstractmethod
     def get_relevant_events_list(self):
@@ -171,3 +181,6 @@ class DataEnricherBase:
             str: The edge type name.
         """
         pass
+
+    def get_kafka_broker(self):
+        return "localhost:9092"
