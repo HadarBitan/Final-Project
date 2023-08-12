@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Blocked Users Statistics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-image: url("/../static/background.jpg");
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .chart-container {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            max-width: 80%;
+            width: 800px;
+            text-align: center;
+            margin: 20px auto;
+            border-radius: 8px;
+        }
+
+        canvas {
+            max-width: 100%;
+            height: 400px;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #555;
+        }
+
+        .chart-title {
+            font-size: 20px;
+            margin-top: 10px;
+        }
+
+        .chart-subtitle {
+            font-size: 14px;
+            color: #777;
+        }
+
+        .chart-labels {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="chart-container">
+        <h1>Blocked Users Statistics In The Last Week</h1>
+        <canvas id="blockedNewUsersChart"></canvas>
+        <div class="chart-title">Weekly Analysis</div>
+        <div class="chart-subtitle">Blocked New Users by Day of the Week</div>
+    </div>
+
+    <div class="chart-container">
+        <h1>Blocked Users Statistics Per Week In The Last Month</h1>
+        <canvas id="blockedLastMonthByWeek"></canvas>
+        <div class="chart-title">Weekly Analysis</div>
+        <div class="chart-subtitle">Blocked Users by Week in the Last Month</div>
+    </div>
+
+    <div class="chart-container">
+        <h1>Blocked Users Statistics Per Month In 2023</h1>
+        <canvas id="blockedUsersChart"></canvas>
+        <div class="chart-title">Monthly Analysis</div>
+        <div class="chart-subtitle">Blocked Users by Month</div>
+    </div>
+
+    <script>
+        var ctx1 = document.getElementById('blockedNewUsersChart').getContext('2d');
+        var blockedNewUsersChart = new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+                datasets: [{
+                    label: 'Blocked Users',
+                    data: [2, 5, 3, 4, 6, 1, 0], // Replace with your weekly data
+                    backgroundColor: 'rgb(161,0,19)',
+                    borderColor: 'rgba(161,0,19,0.75)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        var ctx2 = document.getElementById('blockedLastMonthByWeek').getContext('2d');
+        var blockedLastMonthByWeekChart = new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                datasets: [{
+                    label: 'Blocked Users',
+                    data: [15, 30, 20, 25], // Replace with your weekly data for last month
+                    backgroundColor: 'rgb(0,102,204)',
+                    borderColor: 'rgba(0,102,204,0.75)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        var ctx3 = document.getElementById('blockedUsersChart').getContext('2d');
+        var blockedUsersChart = new Chart(ctx3, {
+            type: 'bar',
+            data: {
+                labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+                datasets: [{
+                    label: 'Blocked Users',
+                    data: [50, 120, 80, 90, 110, 70, 130, 100, 75, 60, 90, 105], // Replace with your monthly data
+                    backgroundColor: 'rgb(161,0,19)',
+                    borderColor: 'rgba(161,0,19,0.75)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
