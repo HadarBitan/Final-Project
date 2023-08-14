@@ -1,5 +1,4 @@
-from online_processing import EventProcessor
-from online_processing.online_process import online_process
+from EventProcessor import EventProcessor
 
 
 class PhoneUpdateEventProcessor(EventProcessor):
@@ -9,7 +8,8 @@ class PhoneUpdateEventProcessor(EventProcessor):
 
 
 class PhoneUpdateEvent:
-    def __init__(self, json_data):
+    def __init__(self, online_process, json_data):
+        self.online_process = online_process
         self.json_data = json_data
 
     def activate_all(self):
@@ -17,4 +17,4 @@ class PhoneUpdateEvent:
 
     def phoneUsedByAccount(self):
         json_output = self.json_data.selectExpr("data.account", "data.phone")
-        online_process.write_to_kafka(producer="demo_cons", output=json_output)
+        self.online_process.write_to_kafka(producer="demo_cons", output=json_output)
