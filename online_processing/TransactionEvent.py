@@ -24,9 +24,9 @@ class TransactionEvent:
     def ipUsedByAccount(self):
         # extract the ip of the account and account fields
         account = self.data.get("account")
-        src = self.data.get("src")
+        src = self.data.get("ip_sender")
         # creating the json massage to send to kafka
-        new_json = {"account": account, "src": src}
+        new_json = {"account": account, "ip_sender": src}
         # Convert the new JSON object to a string
         json_output = json.dumps(new_json)
         # Write the JSON output to Kafka using the OnlineProcess class
@@ -46,9 +46,9 @@ class TransactionEvent:
     def ipSrcUsedByNumberOfTransfer(self):
         # extract the src and number_of_transfer fields
         number_of_transfer = self.data.get("number_of_transfer")
-        src = self.data.get("src")
+        src = self.data.get("ip_sender")
         # creating the json massage to send to kafka
-        new_json = {"number_of_transfer": number_of_transfer, "src": src}
+        new_json = {"number_of_transfer": number_of_transfer, "ip_sender": src}
         # Convert the new JSON object to a string
         json_output = json.dumps(new_json)
         # Write the JSON output to Kafka using the OnlineProcess class
@@ -57,9 +57,9 @@ class TransactionEvent:
     def ipDstUsedByNumberOfTransfer(self):
         # extract the dst and number_of_transfer fields
         number_of_transfer = self.data.get("number_of_transfer")
-        dst = self.data.get("dst")
+        dst = self.data.get("ip_receiver")
         # creating the json massage to send to kafka
-        new_json = {"number_of_transfer": number_of_transfer, "dst": dst}
+        new_json = {"number_of_transfer": number_of_transfer, "ip_receiver": dst}
         # Convert the new JSON object to a string
         json_output = json.dumps(new_json)
         # Write the JSON output to Kafka using the OnlineProcess class
@@ -68,7 +68,7 @@ class TransactionEvent:
     def regionUsedByAccount(self):
         # extract the region and account fields
         account = self.data.get("account")
-        region = self.data.get("region")
+        region = self.data.get("props").get("region")
         # creating the json massage to send to kafka
         new_json = {"account": account, "region": region}
         # Convert the new JSON object to a string
