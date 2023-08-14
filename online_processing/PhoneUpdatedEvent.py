@@ -1,4 +1,7 @@
+import json
+
 from EventProcessor import EventProcessor
+from online_processing.online_process import OnlineProcess
 
 
 class PhoneUpdateEventProcessor(EventProcessor):
@@ -8,13 +11,19 @@ class PhoneUpdateEventProcessor(EventProcessor):
 
 
 class PhoneUpdateEvent:
-    def __init__(self, online_process, json_data):
-        self.online_process = online_process
-        self.json_data = json_data
+    def __init__(self, json_data):
+        self.data = json.loads(json_data)
 
     def activate_all(self):
         self.phoneUsedByAccount()
 
     def phoneUsedByAccount(self):
-        json_output = self.json_data.selectExpr("data.account", "data.phone")
-        self.online_process.write_to_kafka(producer="demo_cons", output=json_output)
+        # extract the ip of the account and account fields
+        account = self.data.get("account")
+        phone = self.data.get("phone")
+        # creating the json massage to send to kafka
+        new_json = {"account": account, "phone": phone}
+        # Convert the new JSON object to a string
+        json_output = json.dumps(new_json)
+        # Write the JSON output to Kafka using the OnlineProcess class
+        OnlineProcess().write_to_kafka(producer_topic="demo_cons", output=json_output)

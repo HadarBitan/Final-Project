@@ -1,20 +1,29 @@
+import json
+
 from EventProcessor import EventProcessor
+from online_processing.online_process import OnlineProcess
 
 
 class EmailUpdateEventProcessor(EventProcessor):
     def handle(self):
-        email_update_event = EmailUpdateEvent(self.online_process, self.json_data)
+        email_update_event = EmailUpdateEvent(self.json_data)
         email_update_event.activate_all()
 
 
 class EmailUpdateEvent:
-    def __init__(self, online_process, json_data):
-        self.online_process = online_process
-        self.json_data = json_data
+    def __init__(self, json_data):
+        self.data = json.loads(json_data)
 
     def activate_all(self):
         self.emailUsedByAccount()
 
     def emailUsedByAccount(self):
-        json_output = self.json_data.selectExpr("data.account", "data.email")
-        self.online_process.write_to_kafka(producer="demo_cons", output=json_output)
+        # extract the email and account fields
+        account = self.data.get("account")
+        email = self.data.get("email")
+        # creating the json massage to send to kafka
+        new_json = {"account": account, "email": email}
+        # Convert the new JSON object to a string
+        json_output = json.dumps(new_json)
+        # Write the JSON output to Kafka using the OnlineProcess class
+        OnlineProcess().write_to_kafka(producer_topic="demo_cons", output=json_output)
