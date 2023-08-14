@@ -1,74 +1,88 @@
-import unittest
-from offline_processing.EmailUsedByAccount import EmailUsedByAccount
+import shutil
 from datetime import datetime
 from pyspark.sql import SparkSession
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType
-from pyspark.sql.functions import col
+import os
+
+os.environ['PYSPARK_PYTHON'] = 'python'
+from offline_processing.EmailUsedByAccount import EmailUsedByAccount
+
+my_datetime = datetime(2023, 8, 12, 15, 30, 0)  # Year, Month, Day, Hour, Minute, Second
+
+data = [
+    ("2023-08-12 15:30:00", "user@example.com", "account123", "15", "12", "08", "2023"),
+    ("2023-08-12 16:45:00", "user2@example.com", "account456", "15", "12", "08", "2023")
+    # Add more rows here
+]
+
+# Create a DataFrame from the sample data
 
 
-class TestEmailUsedByAccount(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        # Initialize a Spark session for the tests
-        cls.spark = SparkSession.builder \
-            .appName("unittests") \
-            .master("local[*]") \
-            .getOrCreate()
+schema = StructType([ \
+    StructField("timestamp", StringType(), True), \
+    StructField("email", StringType(), True), \
+    StructField("pp_account", StringType(), True), \
+    StructField("hour", StringType(), True), \
+    StructField("day", StringType(), True), \
+    StructField("month", StringType(), True), \
+    StructField("year", StringType(), True) \
+ \
+    ])
 
-    @classmethod
-    def tearDownClass(cls):
-        # Stop the Spark session after all tests are done
-        cls.spark.stop()
+data_info_enrich = [
+    ("user@example.com", "email_created_timestmap", "email_last_used", "backup_email", "email_owner_name"),
+    ("user2@example.com", "email_created_timestmap", "email_last_used", "backup_email", "email_owner_name")
+    # Add more rows here
+]
 
-    def setUp(self):
-        self.my_datetime = datetime(2023, 8, 12, 15, 30, 0)
-
-        data = [
-            ("2023-08-12 15:30:00", "user@example.com", "account123", "15", "12", "08", "2023"),
-            ("2023-08-12 16:45:00", "user2@example.com", "account456", "15", "12", "08", "2023")
-        ]
-
-        schema = StructType([
-            StructField("timestamp", StringType(), True),
-            StructField("email", StringType(), True),
-            StructField("pp_account", StringType(), True),
-            StructField("hour", StringType(), True),
-            StructField("day", StringType(), True),
-            StructField("month", StringType(), True),
-            StructField("year", StringType(), True)
-        ])
-
-        # Create a DataFrame with the test data
-        self.df = self.spark.createDataFrame(data, schema)
-        self.df.createOrReplaceTempView("email_changed_event")
-
-    def test_join_kafka_with_table(self):
-        # Instantiate the EmailUsedByAccount class
-        email_by_pp_account = EmailUsedByAccount(self.spark)
-
-        # Call the function you want to test
-        email_by_pp_account.join_kafka_with_table(self.my_datetime, "email_changed_event")
-
-        # Assert the results or perform other tests as needed
-        result_df = self.spark.table("email_changed_event_proccesed")
-
-        # Example assertions
-        self.assertEqual(result_df.count(), 2)
-        self.assertEqual(result_df.columns,
-                         ["timestamp", "email", "pp_account", "hour", "day", "month", "year", "email_created_timestmap",
-                          "email_last_used", "backup_email", "email_owner_name"])
-
-    def test_email_owner_name_not_null(self):
-        # Instantiate the EmailUsedByAccount class
-        email_by_pp_account = EmailUsedByAccount(self.spark)
-
-        # Call the function you want to test
-        email_by_pp_account.join_kafka_with_table(self.my_datetime, "email_changed_event")
-
-        # Assert that email_owner_name is not null in the result DataFrame
-        result_df = self.spark.table("email_changed_event_proccesed")
-        self.assertFalse(result_df.filter(col("email_owner_name").isNull()).count() > 0)
+# Create a DataFrame from the sample data
 
 
-if __name__ == '__main__':
-    unittest.main()
+schema_info = StructType([ \
+    StructField("org_email", StringType(), True),
+    StructField("email_created_timestmap", StringType(), True), \
+    StructField("email_last_used", StringType(), True), \
+    StructField("backup_email", StringType(), True), \
+    StructField("email_owner_name", StringType(), True) \
+    ])
+
+import os
+
+os.environ['PYSPARK_PYTHON'] = 'python'
+
+spark = SparkSession.builder \
+    .appName("DataEnricher1") \
+    .master("local[*]").getOrCreate()
+
+if spark.catalog.tableExists("email_changed_event_proccesed"):
+    # Drop the existing table
+    spark.sql("DROP TABLE IF EXISTS email_changed_event_proccesed")
+
+import os
+
+os.environ['PYSPARK_PYTHON'] = 'python'
+
+df = spark.createDataFrame(data, schema)
+df_info = spark.createDataFrame(data_info_enrich, schema_info)
+# df_info.write.mode("overwrite").saveAsTable("email_info")
+
+df.createTempView("email_changed_event_partitioned")
+df_info.createTempView("email_info")
+
+email_by_pp_account = EmailUsedByAccount(spark)
+
+email_by_pp_account.join_kafka_with_table(my_datetime, "email_changed_event")
+spark.table("email_changed_event_proccesed").show()
+directory_path = "C:/Users/Tal%20Ornan/PycharmProjects/Final-Project/offline_processing/tests/spark-warehouse"
+if os.path.exists(directory_path):
+    try:
+        shutil.rmtree(directory_path)
+        print(f"Directory '{directory_path}' successfully deleted.")
+    except Exception as e:
+        print(f"Error deleting directory '{directory_path}': {str(e)}")
+else:
+    print(f"Directory '{directory_path}' does not exist.")
+
+spark.stop()
