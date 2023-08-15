@@ -3,9 +3,9 @@ from online_processing.online_process import OnlineProcess
 from online_processing.EventProcessor import EventProcessor
 from TransactionEvent import TransactionEventProcessor
 from EmailUpdateEvent import EmailUpdateEventProcessor
-from CreditCardAddedEvent import CreditCardUpdateEventProcessor
-from IPUpdatedEvent import IPUpdateEventProcessor
-from PhoneUpdatedEvent import PhoneUpdateEventProcessor
+from CreditCardUpdateEvent import CreditCardUpdateEventProcessor
+from IPUpdateEvent import IPUpdateEventProcessor
+from PhoneUpdateEvent import PhoneUpdateEventProcessor
 
 
 def process_event(data_json):
@@ -20,7 +20,7 @@ def process_event(data_json):
     event_processor_classes = {
         "transaction": TransactionEventProcessor,
         "emailupdate": EmailUpdateEventProcessor,
-        "creditcardadd": CreditCardUpdateEventProcessor,
+        "creditcardupdate": CreditCardUpdateEventProcessor,
         "ipaddressupdate": IPUpdateEventProcessor,
         "phonenumberupdate": PhoneUpdateEventProcessor
     }
