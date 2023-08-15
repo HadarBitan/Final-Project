@@ -1,7 +1,6 @@
 import json
 from online_processing.online_process import OnlineProcess
-from pyspark.sql.streaming import StreamingQuery
-
+from online_processing.EventProcessor import EventProcessor
 from TransactionEvent import TransactionEventProcessor
 from EmailUpdateEvent import EmailUpdateEventProcessor
 from CreditCardAddedEvent import CreditCardUpdateEventProcessor

@@ -1,10 +1,13 @@
 import json
 
-from EventProcessor import EventProcessor
+from online_processing.EventProcessor import EventProcessor
 from online_processing.online_process import OnlineProcess
 
 
 class EmailUpdateEventProcessor(EventProcessor):
+    def __init__(self, json_data):
+        super().__init__(json_data)
+
     def handle(self):
         email_update_event = EmailUpdateEvent(self.json_data)
         email_update_event.activate_all()

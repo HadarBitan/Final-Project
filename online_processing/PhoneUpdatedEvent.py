@@ -1,6 +1,6 @@
 import json
 
-from EventProcessor import EventProcessor
+from online_processing.EventProcessor import EventProcessor
 from online_processing.online_process import OnlineProcess
 
 
