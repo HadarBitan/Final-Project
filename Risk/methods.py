@@ -3,14 +3,23 @@ from datetime import datetime, timedelta
 
 
 class CassandraClient:
-    def __init__(self, contact_points, keyspace):
+    def _init_(self, contact_points, keyspace):
         self.cluster = Cluster(contact_points)
         self.session = self.cluster.connect(keyspace)
 
     def close(self):
         self.cluster.shutdown()
 
-# checking if the ip address of the sender has been marked as malicious before
+    def activate_all(self):
+        self.malicious_check_by_ip()
+        self.malicious_check_by_time()
+        self.malicious_check_by_amount()
+        self.malicious_check_by_doubletransactions()
+        self.malicious_check_by_ip_dest()
+        self.analyze_transactions()
+        self.is_transfer_after_card_expiry()
+
+    # checking if the ip address of the sender has been marked as malicious before
     def get_malicious_ips(self):
         # Fetches the malicious IP addresses from the malicious_accounts table
         query = "SELECT sender_ip FROM malicious_accounts"
@@ -29,7 +38,7 @@ class CassandraClient:
             if row.src in malicious_ips:
                 print("True: the ip is malicious, the transfer is on hold!")
 
-# checking if the sender has been silent for over a year
+    # checking if the sender has been silent for over a year
     def get_last_transaction_dates(self):
         # Retrieves the last transaction dates for each user
         query = "SELECT Email, MAX(transaction_timestamp) AS last_transaction FROM account_transfer_account_event_proccesed GROUP BY Email"
@@ -48,7 +57,7 @@ class CassandraClient:
             if last_transaction < one_year_ago:
                 print("True: the transfer is on hold!")
 
-# checking if a transaction is over the average amount of usual transactions
+    # checking if a transaction is over the average amount of usual transactions
     def get_last_transaction_amounts(self):
         query = "SELECT Email, transaction_amount FROM account_transfer_account_event_proccesed"
         rows = self.session.execute(query)
@@ -73,7 +82,7 @@ class CassandraClient:
         if last_amount >= 1.5 * average_previous:
             print("True: the transfer is on hold!")
 
-# checking if a 2 transactions has been execute from the same source within 5 minutes from one another
+    # checking if a 2 transactions has been execute from the same source within 5 minutes from one another
     def get_last_transaction_timestamps(self):
         query = "SELECT Email, MAX(transaction_timestamp) AS last_transaction FROM account_transfer_account_event_proccesed GROUP BY Email"
         rows = self.session.execute(query)
@@ -91,7 +100,7 @@ class CassandraClient:
             if last_transaction >= five_minutes_ago:
                 print("True: the transfer is on hold!")
 
-# checking if the ip address of the receiver has been marked as malicious before
+    # checking if the ip address of the receiver has been marked as malicious before
     def malicious_check_by_ip_dest(self):
         malicious_ips = self.get_malicious_ips()
 
@@ -102,7 +111,7 @@ class CassandraClient:
             if row.dst_type in malicious_ips:
                 print("True: the transfer is on hold!")
 
-# checking if the account transfer the money to an account that a day before transfer the same amount
+    # checking if the account transfer the money to an account that a day before transfer the same amount
     def check_previous_transfer(self, src_account, dst_account, timestamp, transaction_amount):
         # Calculate the timestamp for the previous day
         previous_day = timestamp - timedelta(days=1)
@@ -125,11 +134,13 @@ class CassandraClient:
             timestamp = row.timestamp
             transaction_amount = row.transaction_amount
 
-            has_previous_transfer = self.check_previous_transfer(src_account, dst_account, timestamp, transaction_amount)
+            has_previous_transfer = self.check_previous_transfer(src_account, dst_account, timestamp,
+                                                                 transaction_amount)
 
-            print(f"Transaction from {src_account} to {dst_account} at {timestamp}: {'Has Previous Transfer' if has_previous_transfer else 'No Previous Transfer'}")
+            print(
+                f"Transaction from {src_account} to {dst_account} at {timestamp}: {'Has Previous Transfer' if has_previous_transfer else 'No Previous Transfer'}")
 
-# checking if a transfer was made after the expiration date of the credit card
+    # checking if a transfer was made after the expiration date of the credit card
     def is_transfer_after_card_expiry(self):
         query = f"SELECT * FROM account_transfer_account_event_proccesed ALLOW FILTERING"
         rows = self.session.execute(query)
@@ -152,43 +163,17 @@ class CassandraClient:
                 else:
                     print(f"Transaction {row} was made before or on the expiration date of the credit card.")
 
+
 # checking if a transfer was made from the account region(the path in the graph account->number of transfer->region->account)
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     contact_points = ["127.0.0.1"]
     keyspace = "final_project"
 
     cassandra_client = CassandraClient(contact_points, keyspace)
 
-    result_ip = cassandra_client.malicious_check_by_ip()
-    result_time = cassandra_client.malicious_check_by_time()
-    result_amount = cassandra_client.malicious_check_by_amount()
-    result_double_transactions = cassandra_client.malicious_check_by_doubletransactions()
-    result_ip_dest = cassandra_client.malicious_check_by_ip_dest()
+    cassandra_client.activate_all()
 
-    if result_ip:
-        print("User is malicious based on IP.")
-    else:
-        print("User is not malicious based on IP.")
 
-    if result_time:
-        print("User is malicious based on time.")
-    else:
-        print("User is not malicious based on time.")
-
-    if result_amount:
-        print("User is malicious based on transaction amount.")
-    else:
-        print("User is not malicious based on transaction amount.")
-
-    if result_double_transactions:
-        print("User is malicious based on double transactions.")
-    else:
-        print("User is not malicious based on double transactions.")
-    if result_ip_dest:
-        print("User is malicious based on destination IP.")
-    else:
-        print("User is not malicious based on destination IP.")
 
     cassandra_client.close()
