@@ -26,7 +26,7 @@ class TransactionEvent:
         account = self.data.get("account")
         src = self.data.get("ip_sender")
         # creating the json massage to send to kafka
-        new_json = {"account": account, "ip_sender": src}
+        new_json = {"account": account, "ip": src}
         # Convert the new JSON object to a string
         json_output = json.dumps(new_json)
         # Write the JSON output to Kafka using the OnlineProcess class
