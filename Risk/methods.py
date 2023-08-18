@@ -10,14 +10,23 @@ class CassandraClient:
     def close(self):
         self.cluster.shutdown()
 
-    def activate_all(self):
-        self.malicious_check_by_ip()
-        self.malicious_check_by_time()
-        self.malicious_check_by_amount()
-        self.malicious_check_by_doubletransactions()
-        self.malicious_check_by_ip_dest()
-        self.analyze_transactions()
-        self.is_transfer_after_card_expiry()
+    def insert_approval_status(self, transaction_number, approval_status):
+        query = "INSERT INTO transaction_approval_status (transaction_number, approval_status) VALUES (%s, %s)"
+        self.session.execute(query, (transaction_number, approval_status))
+
+    def process_transactions(self):
+        query = "SELECT * FROM account_transfer_account_event_proccesed"
+        result = self.session.execute(query)
+
+        for row in result:
+            transaction_number = row.transaction_number
+            self.malicious_check_by_ip(transaction_number)
+            self.malicious_check_by_time(transaction_number)
+            self.malicious_check_by_amount(transaction_number)
+            self.malicious_check_by_doubletransactions(transaction_number)
+            self.malicious_check_by_ip_dest(transaction_number)
+            self.analyze_transaction(transaction_number)
+            self.is_transfer_after_card_expiry(transaction_number)
 
     # checking if the ip address of the sender has been marked as malicious before
     def get_malicious_ips(self):
@@ -27,16 +36,19 @@ class CassandraClient:
         malicious_ips = {row.sender_ip for row in rows}
         return malicious_ips
 
-    def malicious_check_by_ip(self):  # -> first_methods
+    def malicious_check_by_ip(self, transaction_number):  # -> first_methods
         # Checks if any source IP is in the list of malicious IPs
         malicious_ips = self.get_malicious_ips()
 
-        query = "SELECT src FROM ip_used_by_account_proccesed"
-        rows = self.session.execute(query)
+        query = "SELECT src FROM ip_used_by_account_proccesed WHERE transaction_number = %s"
+        rows = self.session.execute(query, (transaction_number,))
 
         for row in rows:
             if row.src in malicious_ips:
-                print("True: the ip is malicious, the transfer is on hold!")
+                approval_status = "Not Approved - Malicious IP"
+            else:
+                approval_status = "Approved"
+            self.insert_approval_status(row.transaction_number, approval_status)
 
     # checking if the sender has been silent for over a year
     def get_last_transaction_dates(self):
@@ -46,7 +58,7 @@ class CassandraClient:
         last_transaction_dates = {row.Email: row.last_transaction for row in rows}
         return last_transaction_dates
 
-    def malicious_check_by_time(self):  # -> second_method
+    def malicious_check_by_time(self, transaction_number):  # -> second_method
         # Checks if it has been at least a year since the last user transaction
         last_transaction_dates = self.get_last_transaction_dates()
 
@@ -55,7 +67,10 @@ class CassandraClient:
 
         for email, last_transaction in last_transaction_dates.items():
             if last_transaction < one_year_ago:
-                print("True: the transfer is on hold!")
+                approval_status = "Not Approved - Malicious IP"
+            else:
+                approval_status = "Approved"
+            self.insert_approval_status(transaction_number, approval_status)
 
     # checking if a transaction is over the average amount of usual transactions
     def get_last_transaction_amounts(self):
@@ -68,7 +83,7 @@ class CassandraClient:
 
         return transaction_amounts
 
-    def malicious_check_by_amount(self):  # third method
+    def malicious_check_by_amount(self, transaction_number):  # third method
         transaction_amounts = self.get_last_transaction_amounts()
 
         last_amount = 0
@@ -80,7 +95,10 @@ class CassandraClient:
                 average_previous = sum(previous_amounts) / len(previous_amounts)
 
         if last_amount >= 1.5 * average_previous:
-            print("True: the transfer is on hold!")
+            approval_status = "Not Approved - Malicious IP"
+        else:
+            approval_status = "Approved"
+        self.insert_approval_status(transaction_number, approval_status)
 
     # checking if a 2 transactions has been execute from the same source within 5 minutes from one another
     def get_last_transaction_timestamps(self):
@@ -89,7 +107,7 @@ class CassandraClient:
         last_transaction_timestamps = {row.Email: row.last_transaction for row in rows}
         return last_transaction_timestamps
 
-    def malicious_check_by_doubletransactions(self):
+    def malicious_check_by_doubletransactions(self, transaction_number):
         # four method -> verification faceID or password
         last_transaction_timestamps = self.get_last_transaction_timestamps()
 
@@ -98,73 +116,75 @@ class CassandraClient:
 
         for email, last_transaction in last_transaction_timestamps.items():
             if last_transaction >= five_minutes_ago:
-                print("True: the transfer is on hold!")
+                approval_status = "Not Approved - Malicious IP"
+            else:
+                approval_status = "Approved"
+            self.insert_approval_status(transaction_number, approval_status)
 
     # checking if the ip address of the receiver has been marked as malicious before
-    def malicious_check_by_ip_dest(self):
+    def malicious_check_by_ip_dest(self, transaction_number):
         malicious_ips = self.get_malicious_ips()
 
-        query = "SELECT dst_type FROM account_transfer_account_event_proccesed"
-        rows = self.session.execute(query)
+        query = "SELECT dst_type FROM account_transfer_account_event_proccesed WHERE transaction_number = %s"
+        rows = self.session.execute(query, (transaction_number,))
 
         for row in rows:
             if row.dst_type in malicious_ips:
-                print("True: the transfer is on hold!")
+                approval_status = "Not Approved - Malicious IP"
+            else:
+                approval_status = "Approved"
+            self.insert_approval_status(transaction_number, approval_status)
 
     # checking if the account transfer the money to an account that a day before transfer the same amount
-    def check_previous_transfer(self, src_account, dst_account, timestamp, transaction_amount):
+    def check_previous_transfer(self, dst_account, timestamp, transaction_amount):
         # Calculate the timestamp for the previous day
         previous_day = timestamp - timedelta(days=1)
 
         # Prepare and execute the query to check for a previous transfer
-        query = f"SELECT * FROM account_transfer_account_event_proccesed WHERE src = %s AND dst = %s AND" \
+        query = f"SELECT * FROM account_transfer_account_event_proccesed WHERE src = %s AND" \
                 f" transaction_timestamp >= %s AND transaction_timestamp <= %s AND transaction_amount = %s"
-        result = self.session.execute(query, (src_account, dst_account, previous_day, timestamp, transaction_amount))
+        result = self.session.execute(query, (dst_account, dst_account, previous_day, timestamp, transaction_amount))
 
         return len(result.current_rows) > 0
 
-    def analyze_transactions(self):
+    def analyze_transactions(self, transaction_number):
         # Query and process data from the tables
-        query = "SELECT src, dst, timestamp, transaction_amount FROM account_transfer_account_event_proccesed"
-        result = self.session.execute(query)
+        query = "SELECT dst, timestamp, transaction_amount FROM account_transfer_account_event_proccesed WHERE transaction_number = %s"
+        result = self.session.execute(query, (transaction_number,))
 
         for row in result:
-            src_account = row.src
             dst_account = row.dst
             timestamp = row.timestamp
             transaction_amount = row.transaction_amount
 
-            has_previous_transfer = self.check_previous_transfer(src_account, dst_account, timestamp,
-                                                                 transaction_amount)
+            has_previous_transfer = self.check_previous_transfer(dst_account, timestamp, transaction_amount)
 
-            print(
-                f"Transaction from {src_account} to {dst_account} at {timestamp}: {'Has Previous Transfer' if has_previous_transfer else 'No Previous Transfer'}")
+            if has_previous_transfer:
+                approval_status = "Not Approved - Malicious IP"
+            else:
+                approval_status = "Approved"
+            self.insert_approval_status(transaction_number, approval_status)
 
     # checking if a transfer was made after the expiration date of the credit card
-    def is_transfer_after_card_expiry(self):
-        query = f"SELECT * FROM account_transfer_account_event_proccesed ALLOW FILTERING"
-        rows = self.session.execute(query)
+    def is_transfer_after_card_expiry(self, transaction_number):
+        query = f"SELECT transaction_timestamp, source_account FROM account_transfer_account_event_proccesed WHERE transaction_number = %s"
+        rows = self.session.execute(query, (transaction_number,))
 
         for row in rows:
             transaction_timestamp = row.timestamp
-            credit_card_number = row.credit_card_number
+            source_account = row.source_account
 
-            if not credit_card_number:
-                # Skip transactions without credit card info
-                continue
+        query = f"SELECT expiration_date FROM credit_card_added_proccesed WHERE account_number = '{source_account}'"
+        result = self.session.execute(query)
 
-            query = f"SELECT expiration_date FROM credit_card_added_proccesed WHERE credit_card_number = '{credit_card_number}'"
-            result = self.session.execute(query)
+        for card_row in result:
+            expiration_date = card_row.expiration_date
+            if expiration_date and transaction_timestamp > expiration_date:
+                approval_status = "Not Approved - Malicious IP"
+            else:
+                approval_status = "Approved"
+            self.insert_approval_status(transaction_number, approval_status)
 
-            for card_row in result:
-                expiration_date = card_row.expiration_date
-                if expiration_date and transaction_timestamp > expiration_date:
-                    print(f"Transaction {row} was made after the expiration date of the credit card.")
-                else:
-                    print(f"Transaction {row} was made before or on the expiration date of the credit card.")
-
-
-# checking if a transfer was made from the account region(the path in the graph account->number of transfer->region->account)
 
 if __name__ == '__main__':
     contact_points = ["127.0.0.1"]
