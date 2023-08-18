@@ -40,7 +40,7 @@ class CassandraClient:
         # Checks if any source IP is in the list of malicious IPs
         malicious_ips = self.get_malicious_ips()
 
-        query = "SELECT src FROM ip_used_by_account_proccesed WHERE transaction_number = %s"
+        query = "SELECT source_account FROM account_transfer_account_event_proccesed WHERE transaction_number = %s"
         rows = self.session.execute(query, (transaction_number,))
 
         for row in rows:
@@ -51,16 +51,16 @@ class CassandraClient:
             self.insert_approval_status(row.transaction_number, approval_status)
 
     # checking if the sender has been silent for over a year
-    def get_last_transaction_dates(self):
+    def get_last_transaction_dates(self, transaction_number):
         # Retrieves the last transaction dates for each user
-        query = "SELECT Email, MAX(transaction_timestamp) AS last_transaction FROM account_transfer_account_event_proccesed GROUP BY Email"
-        rows = self.session.execute(query)
+        query = "SELECT Email, MAX(transaction_timestamp) AS last_transaction FROM account_transfer_account_event_proccesed WHERE transaction_number = % s GROUP BY Email"
+        rows = self.session.execute(query, (transaction_number,))
         last_transaction_dates = {row.Email: row.last_transaction for row in rows}
         return last_transaction_dates
 
     def malicious_check_by_time(self, transaction_number):  # -> second_method
         # Checks if it has been at least a year since the last user transaction
-        last_transaction_dates = self.get_last_transaction_dates()
+        last_transaction_dates = self.get_last_transaction_dates(transaction_number)
 
         current_date = datetime.now()
         one_year_ago = current_date - timedelta(days=365)
@@ -73,9 +73,9 @@ class CassandraClient:
             self.insert_approval_status(transaction_number, approval_status)
 
     # checking if a transaction is over the average amount of usual transactions
-    def get_last_transaction_amounts(self):
-        query = "SELECT Email, transaction_amount FROM account_transfer_account_event_proccesed"
-        rows = self.session.execute(query)
+    def get_last_transaction_amounts(self, transaction_number):
+        query = "SELECT Email, transaction_amount FROM account_transfer_account_event_proccesed WHERE transaction_number = % s"
+        rows = self.session.execute(query, (transaction_number,))
         transaction_amounts = {}
 
         for row in rows:
@@ -84,7 +84,7 @@ class CassandraClient:
         return transaction_amounts
 
     def malicious_check_by_amount(self, transaction_number):  # third method
-        transaction_amounts = self.get_last_transaction_amounts()
+        transaction_amounts = self.get_last_transaction_amounts(transaction_number)
 
         last_amount = 0
         average_previous = 0
@@ -101,20 +101,27 @@ class CassandraClient:
         self.insert_approval_status(transaction_number, approval_status)
 
     # checking if a 2 transactions has been execute from the same source within 5 minutes from one another
-    def get_last_transaction_timestamps(self):
-        query = "SELECT Email, MAX(transaction_timestamp) AS last_transaction FROM account_transfer_account_event_proccesed GROUP BY Email"
-        rows = self.session.execute(query)
-        last_transaction_timestamps = {row.Email: row.last_transaction for row in rows}
+    def get_last_transaction_timestamps(self, source_account):
+        query = "SELECT MAX(transaction_timestamp) AS last_transaction FROM account_transfer_account_event_proccesed" \
+                "WHERE source_account = %s AND " \
+                "transaction_timestamp < (SELECT MAX(transaction_timestamp) FROM account_transfer_account_event_proccesed WHERE source_account = %s)"
+        rows = self.session.execute(query, (source_account,))
+        last_transaction_timestamps = {row.last_transaction for row in rows}
         return last_transaction_timestamps
 
     def malicious_check_by_doubletransactions(self, transaction_number):
+        query = "SELECT source_account FROM account_transfer_account_event_proccesed WHERE transaction_number = %s"
+        rows = self.session.execute(query, (transaction_number,))
+        source_account = ""
+        for row in rows:
+            source_account = row.source_account
         # four method -> verification faceID or password
-        last_transaction_timestamps = self.get_last_transaction_timestamps()
+        last_transaction_timestamps = self.get_last_transaction_timestamps(source_account)
 
         current_date = datetime.now()
         five_minutes_ago = current_date - timedelta(minutes=5)
 
-        for email, last_transaction in last_transaction_timestamps.items():
+        for last_transaction in last_transaction_timestamps:
             if last_transaction >= five_minutes_ago:
                 approval_status = "Not Approved - Malicious IP"
             else:
