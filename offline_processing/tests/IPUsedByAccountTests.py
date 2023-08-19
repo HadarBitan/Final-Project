@@ -13,7 +13,6 @@ from offline_processing.IPUsedByAccount import IPUsedByAccount
 
 
 class TestIpEdge(unittest.TestCase):
-
     def clean_dirty_test(self, spark):
         if spark.catalog.tableExists("IP_info_proccesed"):
             # Drop the existing table
