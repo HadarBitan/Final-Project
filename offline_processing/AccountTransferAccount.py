@@ -8,25 +8,26 @@ from offline_processing.DataEnricherBase import DataEnricherBase
 class AccountTransactionAccount(DataEnricherBase, ABC):
 
     def get_relevant_events_list(self):
-        return ["TransactionEvent"]
+        return ["account_transfer_account_event"]
 
-    def join_by_expression(self):
-        return f"{self.get_src_column_name()} = transactions['source_account'] " \
-               f"OR {self.get_dst_column_name()} = transactions['destination_account']"
+    def join_by_expression(self, partitioned_df, enricher_df):
+        return partitioned_df[f"{self.get_src_column_name()}"] == enricher_df["source_account_event"]
 
     def get_enriched_table(self):
-        return spark.table("edw.transactions")
+        return spark.table("account_transfer_account_info")
 
-    def get_relevant_enriched_columns(self):
+    def get_relevant_enriched_colums(self):
         return [
-            "transaction_amount",
+            "source_account",
+            "number_of_transfer",
+            "destination_account",
             "transaction_timestamp",
+            "transaction_amount",
             "transaction_type",
             "transaction_status",
             "transaction_description",
             "transaction_fee",
             "transaction_currency",
-            "transaction_location"
         ]
 
     def get_src_column_name(self):

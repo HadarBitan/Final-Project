@@ -10,6 +10,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 
+
 class DataEnricherBase:
     """
     The base class for data enrichment with Kafka and Spark.
@@ -23,10 +24,6 @@ class DataEnricherBase:
         Initializes the DataEnricherBase by creating a Spark session.
         """
         self.spark = spark
-
-
-
-
 
     def read_last_hourly_partition_dataframe(self, date, event_name):
         """
@@ -64,7 +61,6 @@ class DataEnricherBase:
 
         df_select.write.mode("overwrite").saveAsTable(f"{event_name}_proccesed")
 
-
     def get_final_schema_expression(self):
         """
         Get the final schema expression for the enriched data.
@@ -73,7 +69,8 @@ class DataEnricherBase:
             str: The schema expression as a string.
         """
         return f"{self.get_src_column_name()} as src,{self.get_dst_column_name()} as dst,{self.get_timestamp_column_name()} as timestamp,\
-        '{self.get_src_type_column_name()}' as src_type,'{self.get_dst_type_column_name()}' as dst_type, '{self.get_edge_type_name()}' as edge_type".split(",")
+        '{self.get_src_type_column_name()}' as src_type,'{self.get_dst_type_column_name()}' as dst_type, '{self.get_edge_type_name()}' as edge_type".split(
+            ",")
 
     def stop_spark_session(self):
         """
