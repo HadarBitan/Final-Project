@@ -3,23 +3,25 @@ from datetime import datetime, timedelta
 
 
 class CassandraClient:
-    def _init_(self, contact_points, keyspace):
-        self.cluster = Cluster(contact_points)
-        self.session = self.cluster.connect(keyspace)
+    def __init__(self, cluster, session):
+        self.cluster = Cluster(cluster)
+        self.session = self.cluster.connect(session)
 
     def close(self):
         self.cluster.shutdown()
 
     def insert_approval_status(self, transaction_number, approval_status):
+        print("hiiB")
         query = "INSERT INTO transaction_approval_status (transaction_number, approval_status) VALUES (%s, %s)"
         self.session.execute(query, (transaction_number, approval_status))
 
     def process_transactions(self):
-        query = "SELECT * FROM account_transfer_account_event_proccesed"
+        print("hadar")
+        query = "SELECT * FROM account_transfer_account_event_processed"
         result = self.session.execute(query)
 
         for row in result:
-            transaction_number = row.transaction_number
+            transaction_number = row.number_of_transfer
             self.malicious_check_by_ip(transaction_number)
             self.malicious_check_by_time(transaction_number)
             self.malicious_check_by_amount(transaction_number)
@@ -39,16 +41,16 @@ class CassandraClient:
     def malicious_check_by_ip(self, transaction_number):  # -> first_methods
         # Checks if any source IP is in the list of malicious IPs
         malicious_ips = self.get_malicious_ips()
-
-        query = "SELECT source_account FROM account_transfer_account_event_proccesed WHERE transaction_number = %s"
-        rows = self.session.execute(query, (transaction_number,))
-
-        for row in rows:
-            if row.src in malicious_ips:
-                approval_status = "Not Approved - Malicious IP"
-            else:
-                approval_status = "Approved"
-            self.insert_approval_status(row.transaction_number, approval_status)
+        # Define the query
+        query = "SELECT source_account FROM account_transfer_account_event_processed WHERE number_of_transfer = ?"
+        # Execute the query
+        result = self.session.execute(query, (transaction_number,))
+        print(result)
+        if result[0].source_account in malicious_ips:
+            approval_status = "Not Approved - Malicious IP"
+        else:
+            approval_status = "Approved"
+        self.insert_approval_status(transaction_number, approval_status)
 
     # checking if the sender has been silent for over a year
     def get_last_transaction_dates(self, transaction_number):
@@ -67,7 +69,7 @@ class CassandraClient:
 
         for email, last_transaction in last_transaction_dates.items():
             if last_transaction < one_year_ago:
-                approval_status = "Not Approved - Malicious IP"
+                approval_status = "Not Approved - hasn't been active for a year"
             else:
                 approval_status = "Approved"
             self.insert_approval_status(transaction_number, approval_status)
@@ -95,7 +97,7 @@ class CassandraClient:
                 average_previous = sum(previous_amounts) / len(previous_amounts)
 
         if last_amount >= 1.5 * average_previous:
-            approval_status = "Not Approved - Malicious IP"
+            approval_status = "Not Approved - suspicious amount of transfer"
         else:
             approval_status = "Approved"
         self.insert_approval_status(transaction_number, approval_status)
@@ -123,7 +125,7 @@ class CassandraClient:
 
         for last_transaction in last_transaction_timestamps:
             if last_transaction >= five_minutes_ago:
-                approval_status = "Not Approved - Malicious IP"
+                approval_status = "Not Approved - last transfer was last then 5 minuets ago"
             else:
                 approval_status = "Approved"
             self.insert_approval_status(transaction_number, approval_status)
@@ -137,7 +139,7 @@ class CassandraClient:
 
         for row in rows:
             if row.dst_type in malicious_ips:
-                approval_status = "Not Approved - Malicious IP"
+                approval_status = "Not Approved - Malicious destination IP"
             else:
                 approval_status = "Approved"
             self.insert_approval_status(transaction_number, approval_status)
@@ -167,7 +169,7 @@ class CassandraClient:
             has_previous_transfer = self.check_previous_transfer(dst_account, timestamp, transaction_amount)
 
             if has_previous_transfer:
-                approval_status = "Not Approved - Malicious IP"
+                approval_status = "Not Approved - possible money laundering"
             else:
                 approval_status = "Approved"
             self.insert_approval_status(transaction_number, approval_status)
@@ -187,20 +189,19 @@ class CassandraClient:
         for card_row in result:
             expiration_date = card_row.expiration_date
             if expiration_date and transaction_timestamp > expiration_date:
-                approval_status = "Not Approved - Malicious IP"
+                approval_status = "Not Approved - credit card expired"
             else:
                 approval_status = "Approved"
             self.insert_approval_status(transaction_number, approval_status)
 
 
 if __name__ == '__main__':
-    contact_points = ["127.0.0.1"]
+    print("hiiiC")
+    cluster_number = ["127.0.0.1"]
     keyspace = "final_project"
+    cassandra_client = CassandraClient(cluster_number, keyspace)
 
-    cassandra_client = CassandraClient(contact_points, keyspace)
-
-    cassandra_client.activate_all()
-
-
+    cassandra_client.process_transactions()
 
     cassandra_client.close()
+
