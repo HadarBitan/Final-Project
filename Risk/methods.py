@@ -27,13 +27,13 @@ class CassandraClient:
             self.malicious_check_by_amount(transaction_number)
             self.malicious_check_by_doubletransactions(transaction_number)
             self.malicious_check_by_ip_dest(transaction_number)
-            self.analyze_transaction(transaction_number)
+            self.analyze_transactions(transaction_number)
             self.is_transfer_after_card_expiry(transaction_number)
 
     # checking if the ip address of the sender has been marked as malicious before
     def get_malicious_ips(self):
         # Fetches the malicious IP addresses from the malicious_accounts table
-        query = "SELECT sender_ip FROM malicious_accounts"
+        query = "SELECT ip FROM malicious_accounts"
         rows = self.session.execute(query)
         malicious_ips = {row.sender_ip for row in rows}
         return malicious_ips
@@ -42,10 +42,9 @@ class CassandraClient:
         # Checks if any source IP is in the list of malicious IPs
         malicious_ips = self.get_malicious_ips()
         # Define the query
-        query = "SELECT source_account FROM account_transfer_account_event_processed WHERE number_of_transfer = ?"
+        query = f"SELECT source_account FROM account_transfer_account_event_processed WHERE number_of_transfer = {transaction_number} ALLOW FILTERING"
         # Execute the query
-        result = self.session.execute(query, (transaction_number,))
-        print(result)
+        result = self.session.execute(query)
         if result[0].source_account in malicious_ips:
             approval_status = "Not Approved - Malicious IP"
         else:
@@ -53,16 +52,24 @@ class CassandraClient:
         self.insert_approval_status(transaction_number, approval_status)
 
     # checking if the sender has been silent for over a year
-    def get_last_transaction_dates(self, transaction_number):
-        # Retrieves the last transaction dates for each user
-        query = "SELECT Email, MAX(transaction_timestamp) AS last_transaction FROM account_transfer_account_event_proccesed WHERE transaction_number = % s GROUP BY Email"
-        rows = self.session.execute(query, (transaction_number,))
+    def get_last_transaction_dates(self, source_account):
+        # Retrieves the last transaction dates
+        query = f"SELECT MAX(transaction_timestamp) AS last_transaction FROM account_transfer_account_event_proccesed" \
+                f"WHERE source_account = {source_account} AND " \
+                f"transaction_timestamp < (SELECT MAX(transaction_timestamp) FROM account_transfer_account_event_proccesed WHERE source_account = {source_account})"
+        rows = self.session.execute(query)
         last_transaction_dates = {row.Email: row.last_transaction for row in rows}
         return last_transaction_dates
 
     def malicious_check_by_time(self, transaction_number):  # -> second_method
+        query = f"SELECT source_account FROM account_transfer_account_event_proccesed WHERE transaction_number = {transaction_number} ALLOW FILTERING"
+        rows = self.session.execute(query)
+        source_account = ""
+        for row in rows:
+            source_account = row.source_account
+
         # Checks if it has been at least a year since the last user transaction
-        last_transaction_dates = self.get_last_transaction_dates(transaction_number)
+        last_transaction_dates = self.get_last_transaction_dates(source_account)
 
         current_date = datetime.now()
         one_year_ago = current_date - timedelta(days=365)
@@ -76,8 +83,8 @@ class CassandraClient:
 
     # checking if a transaction is over the average amount of usual transactions
     def get_last_transaction_amounts(self, transaction_number):
-        query = "SELECT Email, transaction_amount FROM account_transfer_account_event_proccesed WHERE transaction_number = % s"
-        rows = self.session.execute(query, (transaction_number,))
+        query = f"SELECT Email, transaction_amount FROM account_transfer_account_event_proccesed WHERE transaction_number = {transaction_number} ALLOW FILTERING"
+        rows = self.session.execute(query)
         transaction_amounts = {}
 
         for row in rows:
@@ -104,16 +111,16 @@ class CassandraClient:
 
     # checking if a 2 transactions has been execute from the same source within 5 minutes from one another
     def get_last_transaction_timestamps(self, source_account):
-        query = "SELECT MAX(transaction_timestamp) AS last_transaction FROM account_transfer_account_event_proccesed" \
-                "WHERE source_account = %s AND " \
-                "transaction_timestamp < (SELECT MAX(transaction_timestamp) FROM account_transfer_account_event_proccesed WHERE source_account = %s)"
-        rows = self.session.execute(query, (source_account,))
+        query = f"SELECT MAX(transaction_timestamp) AS last_transaction FROM account_transfer_account_event_proccesed" \
+                f"WHERE source_account = {source_account} AND " \
+                f"transaction_timestamp < (SELECT MAX(transaction_timestamp) FROM account_transfer_account_event_proccesed WHERE source_account = {source_account})"
+        rows = self.session.execute(query)
         last_transaction_timestamps = {row.last_transaction for row in rows}
         return last_transaction_timestamps
 
     def malicious_check_by_doubletransactions(self, transaction_number):
-        query = "SELECT source_account FROM account_transfer_account_event_proccesed WHERE transaction_number = %s"
-        rows = self.session.execute(query, (transaction_number,))
+        query = f"SELECT source_account FROM account_transfer_account_event_proccesed WHERE transaction_number = {transaction_number} ALLOW FILTERING"
+        rows = self.session.execute(query)
         source_account = ""
         for row in rows:
             source_account = row.source_account
@@ -134,8 +141,8 @@ class CassandraClient:
     def malicious_check_by_ip_dest(self, transaction_number):
         malicious_ips = self.get_malicious_ips()
 
-        query = "SELECT dst_type FROM account_transfer_account_event_proccesed WHERE transaction_number = %s"
-        rows = self.session.execute(query, (transaction_number,))
+        query = f"SELECT dst_type FROM account_transfer_account_event_proccesed WHERE transaction_number = {transaction_number} ALLOW FILTERING"
+        rows = self.session.execute(query)
 
         for row in rows:
             if row.dst_type in malicious_ips:
@@ -150,16 +157,16 @@ class CassandraClient:
         previous_day = timestamp - timedelta(days=1)
 
         # Prepare and execute the query to check for a previous transfer
-        query = f"SELECT * FROM account_transfer_account_event_proccesed WHERE src = %s AND" \
-                f" transaction_timestamp >= %s AND transaction_timestamp <= %s AND transaction_amount = %s"
-        result = self.session.execute(query, (dst_account, dst_account, previous_day, timestamp, transaction_amount))
+        query = f"SELECT * FROM account_transfer_account_event_proccesed WHERE src = {dst_account} AND" \
+                f" transaction_timestamp >= {previous_day} AND transaction_timestamp <= {timestamp} AND transaction_amount = {transaction_amount}"
+        result = self.session.execute(query)
 
         return len(result.current_rows) > 0
 
     def analyze_transactions(self, transaction_number):
         # Query and process data from the tables
-        query = "SELECT dst, timestamp, transaction_amount FROM account_transfer_account_event_proccesed WHERE transaction_number = %s"
-        result = self.session.execute(query, (transaction_number,))
+        query = f"SELECT dst, timestamp, transaction_amount FROM account_transfer_account_event_proccesed WHERE transaction_number = {transaction_number} ALLOW FILTERING"
+        result = self.session.execute(query)
 
         for row in result:
             dst_account = row.dst
@@ -176,8 +183,8 @@ class CassandraClient:
 
     # checking if a transfer was made after the expiration date of the credit card
     def is_transfer_after_card_expiry(self, transaction_number):
-        query = f"SELECT transaction_timestamp, source_account FROM account_transfer_account_event_proccesed WHERE transaction_number = %s"
-        rows = self.session.execute(query, (transaction_number,))
+        query = f"SELECT transaction_timestamp, source_account FROM account_transfer_account_event_proccesed WHERE transaction_number = {transaction_number} ALLOW FILTERING"
+        rows = self.session.execute(query)
 
         for row in rows:
             transaction_timestamp = row.timestamp

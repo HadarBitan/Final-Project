@@ -174,7 +174,7 @@ class TestCassandraClient(unittest.TestCase):
             "INSERT INTO transaction_approval_status (transaction_number, approval_status) VALUES (%s, %s)",
             ('123', 'Approved')
         )
-        
+
     def test_is_transfer_after_card_expiry_not_approve(self):
         mock_session = Mock()
         mock_session.execute.side_effect = [
